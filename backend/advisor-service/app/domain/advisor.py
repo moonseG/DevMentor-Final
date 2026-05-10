@@ -12,6 +12,7 @@ class AdvisorProfile(Base):
     area_especialidad = Column(String(200), nullable=True)
     materias = Column(JSON, nullable=True)  # Array de IDs de materias
     estado_aprobacion = Column(String(20), nullable=False, default='Pendiente', server_default='Pendiente')
+    approved = Column(Integer, default=0) # <--- AÑADE ESTA (como está en tu MySQL local)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 

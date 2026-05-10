@@ -18,11 +18,11 @@ class RegisterUserService:
         password_hash = pwd_context.hash(contrasena[:72])
 
         user = User(
-            nombre,
-            correo,
-            telefono,
-            password_hash,
-            rol
+            nombre=nombre,
+            correo=correo,
+            telefono=telefono,
+            contrasena=contrasena,
+            rol=rol
         )
 
         user_id = self.repository.create_user(user)

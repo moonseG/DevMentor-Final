@@ -12,4 +12,14 @@ class Materia(Base):
     carrera_id = Column(Integer, ForeignKey("carreras.id"))
     activa = Column(Boolean, default=True)
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "nombre": self.nombre,
+            "descripcion": self.descripcion,
+            "semestre": self.semestre,
+            "carrera_id": self.carrera_id,
+            "activa": self.activa
+        }
+
     carrera = relationship("Carrera")

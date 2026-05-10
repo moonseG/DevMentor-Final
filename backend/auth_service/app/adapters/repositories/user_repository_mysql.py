@@ -52,7 +52,7 @@ class UserRepositoryMySQL(UserRepository):
 
         db = SessionLocal()
 
-        query = text("SELECT * FROM usuarios WHERE id_usuario = :id_usuario")
+        query = text("SELECT * FROM usuarios WHERE id = :id_usuario")
 
         result = db.execute(query, {"id_usuario": id_usuario}).fetchone()
 
@@ -95,7 +95,7 @@ class UserRepositoryMySQL(UserRepository):
             return self.get_user_by_id(id_usuario)
 
         query = text(
-            f"UPDATE usuarios SET {', '.join(set_clauses)} WHERE id_usuario = :id_usuario"
+            f"UPDATE usuarios SET {', '.join(set_clauses)} WHERE id = :id_usuario"
         )
 
         db.execute(query, params)
@@ -107,7 +107,7 @@ class UserRepositoryMySQL(UserRepository):
     def update_status(self, id_usuario, estado):
         db = SessionLocal()
         query = text(
-            "UPDATE usuarios SET estado = :estado WHERE id_usuario = :id_usuario"
+            "UPDATE usuarios SET estado = :estado WHERE id = :id_usuario"
         )
         db.execute(query, {"estado": estado, "id_usuario": id_usuario})
         db.commit()
@@ -118,8 +118,8 @@ class UserRepositoryMySQL(UserRepository):
         db = SessionLocal()
         
         query = text(
-            "SELECT id_usuario, nombre, correo, telefono, rol, estado, fecha_registro "
-            "FROM usuarios ORDER BY id_usuario DESC"
+            "SELECT id, nombre, correo, telefono, rol, estado, fecha_registro "
+            "FROM usuarios ORDER BY id DESC"
         )
         
         rows = db.execute(query).fetchall()

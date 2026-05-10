@@ -45,7 +45,8 @@ class AdvisorRepository:
         advisor = self.get_advisor_by_id(id_perfil)
         
         if advisor is None:
-            return None
+            advisor.estado_aprobacion = 'Aprobado' if aprobado else 'Rechazado'
+            advisor.approved = 1 if aprobado else 0 # Sincroniza ambos
         
         if especialidad:
             advisor.especialidad = especialidad

@@ -621,7 +621,7 @@ docker exec -it admin-devmentor-mysql bash
 export LANG=C.UTF-8
 mysql -u root -p --default-character-set=utf8mb4
 
-SET NAMES utf8mb4;
+
 
 use BD_materias;
 

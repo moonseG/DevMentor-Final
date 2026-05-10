@@ -10,7 +10,7 @@ class ResenaRepositoryMySQL:
                 """
                 SELECT 1
                 FROM asesorias.usuarios
-                WHERE id_usuario = :id_usuario
+                WHERE id = :id_usuario
                 LIMIT 1
                 """
             )
@@ -67,8 +67,8 @@ class ResenaRepositoryMySQL:
                     u.nombre AS nombre_usuario,
                     a.nombre AS nombre_asesor
                 FROM resenas r
-                LEFT JOIN asesorias.usuarios u ON u.id_usuario = r.id_usuario
-                LEFT JOIN asesorias.usuarios a ON a.id_usuario = r.id_usuario_auth
+                LEFT JOIN asesorias.usuarios u ON u.id = r.id_usuario
+                LEFT JOIN asesorias.usuarios a ON a.id = r.id_usuario_auth
                 WHERE r.id_resena = :id_resena
                 """
             )
@@ -123,8 +123,8 @@ class ResenaRepositoryMySQL:
                     u.nombre AS nombre_usuario,
                     a.nombre AS nombre_asesor
                 FROM resenas r
-                LEFT JOIN asesorias.usuarios u ON u.id_usuario = r.id_usuario
-                LEFT JOIN asesorias.usuarios a ON a.id_usuario = r.id_usuario_auth
+                LEFT JOIN asesorias.usuarios u ON u.id = r.id_usuario
+                LEFT JOIN asesorias.usuarios a ON a.id = r.id_usuario_auth
                 {where_clause}
                 ORDER BY r.fecha_creacion DESC, r.id_resena DESC
                 """

@@ -1,31 +1,37 @@
 import os
-from fastapi import FastAPI, Request, Response
+import requests
+import httpx
+from fastapi import FastAPI, Request, Response, Depends
+from fastapi.security import HTTPBearer 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from jose import JWTError, jwt
-import requests
+from pydantic import BaseModel
+from typing import List 
 
-app = FastAPI()
+security = HTTPBearer()
+app = FastAPI(title="DevMentor API Gateway")
 
 # Configurar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción, especifica los orígenes permitidos
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-AUTH_SERVICE_URL = "http://localhost:8001"
-MATERIA_SERVICE_URL = "http://localhost:8002"
-ADVISOR_SERVICE_URL = "http://localhost:8003"
-REVIEW_SERVICE_URL = "http://localhost:8004"
-CONTENT_SERVICE_URL = "http://localhost:8005"
-REPORT_SERVICE_URL = "http://localhost:8006"
-CALENDAR_SERVICE_URL = "http://localhost:8007"
-QR_SERVICE_URL = "http://localhost:8008"
+# --- CONFIGURACIÓN DE PUERTOS (AJUSTADO PARA DOCKER/NUBE) ---
+# CAMBIO AQUÍ: Usamos os.getenv para que Docker Compose mande las URLs correctas
+AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8001")
+MATERIA_SERVICE_URL = os.getenv("MATERIA_SERVICE_URL", "http://localhost:8002")
+ADVISOR_SERVICE_URL = os.getenv("ADVISOR_SERVICE_URL", "http://localhost:8003")
+REVIEW_SERVICE_URL = os.getenv("REVIEW_SERVICE_URL", "http://localhost:8004")
+CALENDAR_SERVICE_URL = os.getenv("CALENDAR_SERVICE_URL", "http://localhost:8007")
 
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-this-secret")
+# Seguridad
+# CAMBIO AQUÍ: Usa la misma llave que en Auth Service
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "Taller2026") 
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 
 PUBLIC_ROUTES = {
@@ -39,55 +45,20 @@ PUBLIC_PATH_PREFIXES = {
     "/openapi.json",
 }
 
+# --- FUNCIONES DE UTILIDAD ---
 
 def is_public_route(request: Request) -> bool:
     if request.method == "OPTIONS":
         return True
-
     if (request.method, request.url.path) in PUBLIC_ROUTES:
         return True
-
     for prefix in PUBLIC_PATH_PREFIXES:
         if request.url.path.startswith(prefix):
             return True
-
     return False
-
-#el gateway valida el token
-@app.middleware("http")
-async def authorization_middleware(request: Request, call_next):
-    if is_public_route(request):
-        return await call_next(request)
-
-    auth_header = request.headers.get("Authorization", "")
-
-    if not auth_header.startswith("Bearer "):
-        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
-
-    token = auth_header.split(" ", 1)[1].strip()
-
-    try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-    except JWTError:
-        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
-
-    user_id = payload.get("sub")
-    role = payload.get("role")
-
-    if not user_id or not role:
-        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
-
-    request.state.user_id = str(user_id)
-    request.state.user_role = str(role)
-
-    return await call_next(request)
-
-# auth_service
-
 
 def build_forward_headers(request: Request):
     headers = {}
-
     authorization = request.headers.get("Authorization")
     if authorization:
         headers["Authorization"] = authorization
@@ -97,7 +68,6 @@ def build_forward_headers(request: Request):
 
     if user_id:
         headers["X-User-ID"] = user_id
-
     if user_role:
         headers["X-User-Role"] = user_role
 
@@ -110,430 +80,212 @@ def forward_response(response):
         media_type=response.headers.get("content-type", "application/json")
     )
 
+# --- MIDDLEWARE DE AUTORIZACIÓN ---
+@app.middleware("http")
+async def authorization_middleware(request: Request, call_next):
+    if is_public_route(request):
+        return await call_next(request)
+
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized: Missing Token"})
+
+    token = auth_header.split(" ", 1)[1].strip()
+
+    try:
+        # CAMBIO AQUÍ: Asegúrate de que JWT_SECRET_KEY sea "Taller2026" para que coincida con Auth
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        request.state.user_id = str(payload.get("sub"))
+        request.state.user_role = str(payload.get("role"))
+        
+    except JWTError:
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized: Invalid or Expired Token"})
+
+    return await call_next(request)
+
+# --- RUTAS: AUTH SERVICE (8001) ---
+
+# Definimos qué necesita el login
+class LoginSchema(BaseModel):
+    correo: str
+    contrasena: str
 
 @app.post("/auth/login")
-async def login(request: Request):
-    body = await request.json()
-
+async def login(datos: LoginSchema, request: Request):
+    # Esto mandará el JSON con la llave "contrasena" al microservicio 8001
     response = requests.post(
-        f"{AUTH_SERVICE_URL}/auth/login",
-        json=body,
-        headers=build_forward_headers(request),
+        f"{AUTH_SERVICE_URL}/auth/login", 
+        json=datos.dict()
     )
-
     return forward_response(response)
 
+class RegisterSchema(BaseModel):
+    nombre: str
+    correo: str
+    telefono: str
+    contrasena: str
+    rol: str  # Por ejemplo: 'estudiante' o 'asesor'
 
 @app.post("/auth/register")
-async def register(request: Request):
-    body = await request.json()
-
+async def register(datos: RegisterSchema, request: Request):
+    # Esto hará que aparezcan los parámetros en Swagger
     response = requests.post(
         f"{AUTH_SERVICE_URL}/auth/register",
-        json=body,
-        headers=build_forward_headers(request),
+        json=datos.dict(),
+        headers=build_forward_headers(request)
     )
-
-    return forward_response(response)
-
-
-@app.get("/auth/users/{id_usuario}")
-async def get_user_by_id(id_usuario: int, request: Request):
-    response = requests.get(
-        f"{AUTH_SERVICE_URL}/auth/users/{id_usuario}",
-        headers=build_forward_headers(request),
-    )
-    return forward_response(response)
-
-
-@app.put("/auth/users/{id_usuario}")
-async def update_user(id_usuario: int, request: Request):
-    body = await request.json()
-
-    response = requests.put(
-        f"{AUTH_SERVICE_URL}/auth/users/{id_usuario}",
-        json=body,
-        headers=build_forward_headers(request),
-    )
-
     return forward_response(response)
 
 @app.get("/auth/users")
-async def get_all_users(request: Request):
+async def get_all_users(request: Request, _ = Depends(security)): # <--- Agrega esto
     response = requests.get(
-        f"{AUTH_SERVICE_URL}/auth/users",
-        headers=build_forward_headers(request),
+        f"{AUTH_SERVICE_URL}/auth/users", 
+        headers=build_forward_headers(request)
     )
     return forward_response(response)
 
-@app.put("/auth/users/{id_usuario}/status")
-async def update_user_status(id_usuario: int, request: Request):
-    body = await request.json()
-    response = requests.put(
-        f"{AUTH_SERVICE_URL}/auth/users/{id_usuario}/status",
-        json=body,
-        headers=build_forward_headers(request),
+@app.get("/auth/users/{user_id}")
+async def get_user_by_id(user_id: int, request: Request, _ = Depends(security)): # <--- Agrega el Depends aquí
+    response = requests.get(
+        f"{AUTH_SERVICE_URL}/auth/users/{user_id}", 
+        headers=build_forward_headers(request)
     )
     return forward_response(response)
 
-
-# materias_service
+# --- RUTAS: MATERIA SERVICE (8002) ---
 
 @app.get("/materias")
-async def get_materias(request: Request):
-    response = requests.get(
-        f"{MATERIA_SERVICE_URL}/materias",
-        headers=build_forward_headers(request),
-    )
+async def get_materias(request: Request, _ = Depends(security)):
+    response = requests.get(f"{MATERIA_SERVICE_URL}/materias", headers=build_forward_headers(request))
     return forward_response(response)
-
 
 @app.get("/lenguajes")
-async def get_lenguajes(request: Request):
-    response = requests.get(
-        f"{MATERIA_SERVICE_URL}/lenguajes/",
-        headers=build_forward_headers(request),
-    )
+async def get_lenguajes(request: Request, _ = Depends(security)):
+    response = requests.get(f"{MATERIA_SERVICE_URL}/lenguajes/", headers=build_forward_headers(request))
     return forward_response(response)
 
-# calendario
-@app.post("/calendario/citas")
-async def crear_cita(request: Request):
-    body = await request.json()
-
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            f"{CALENDAR_SERVICE_URL}/calendario/citas",
-            json=body,
-            headers=build_forward_headers(request)
-        )
-
-    return Response(
-        content=response.content,
-        status_code=response.status_code,
-        media_type="application/json"
-    )
-
-@app.post("/calendario/disponibilidad-semanal")
-async def crear_disponibilidad(request: Request):
-    body = await request.json()
-
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            f"{CALENDAR_SERVICE_URL}/calendario/disponibilidad",
-            json=body,
-            headers=build_forward_headers(request)
-        )
-
-    return Response(
-        content=response.content,
-        status_code=response.status_code,
-        media_type="application/json"
-    )
-
-@app.get("/calendario/disponibilidad")
-async def get_disponibilidad(request: Request):
-    async with httpx.AsyncClient() as client:
-        response = await client.get(
-            f"{CALENDAR_SERVICE_URL}/calendario/disponibilidad",
-            params=dict(request.query_params),
-            headers=build_forward_headers(request)
-        )
-
-    return Response(
-        content=response.content,
-        status_code=response.status_code,
-        media_type="application/json"
-    )
-
-
-# advisor_service
+# --- RUTAS: ADVISOR SERVICE (8003) ---
+class AdvisorSchema(BaseModel):
+    id_usuario_auth: int
+    especialidad: str
+    area_especialidad: str
+    materias: List[int]
 
 @app.post("/advisors")
-async def create_advisor(request: Request):
-    body = await request.json()
-    
+async def create_advisor(datos: AdvisorSchema, request: Request, _ = Depends(security)):
     response = requests.post(
-        f"{ADVISOR_SERVICE_URL}/advisors/",
-        json=body,
-        headers=build_forward_headers(request),
+        f"{ADVISOR_SERVICE_URL}/advisors/", 
+        json=datos.dict(), 
+        headers=build_forward_headers(request)
     )
-    
     return forward_response(response)
-
 
 @app.get("/advisors")
-async def get_all_advisors(request: Request):
-    response = requests.get(
-        f"{ADVISOR_SERVICE_URL}/advisors/",
-        headers=build_forward_headers(request),
-    )
+async def get_all_advisors(request: Request, _ = Depends(security)):
+    response = requests.get(f"{ADVISOR_SERVICE_URL}/advisors/", headers=build_forward_headers(request))
     return forward_response(response)
-
-
-@app.get("/advisors/pending")
-async def get_pending_advisors(request: Request):
-    response = requests.get(
-        f"{ADVISOR_SERVICE_URL}/advisors/pending",
-        headers=build_forward_headers(request),
-    )
-    return forward_response(response)
-
 
 @app.get("/advisors/{id_perfil}")
-async def get_advisor_by_id(id_perfil: int, request: Request):
-    response = requests.get(
-        f"{ADVISOR_SERVICE_URL}/advisors/{id_perfil}",
-        headers=build_forward_headers(request),
-    )
+async def get_advisor_by_id(id_perfil: int, request: Request, _ = Depends(security)):
+    response = requests.get(f"{ADVISOR_SERVICE_URL}/advisors/{id_perfil}", headers=build_forward_headers(request))
     return forward_response(response)
 
+# --- RUTAS: REVIEW SERVICE (8004) ---
 
-@app.get("/advisors/user/{id_usuario_auth}")
-async def get_advisor_by_user_id(id_usuario_auth: int, request: Request):
-    response = requests.get(
-        f"{ADVISOR_SERVICE_URL}/advisors/user/{id_usuario_auth}",
-        headers=build_forward_headers(request),
-    )
-    return forward_response(response)
-
-
-@app.put("/advisors/{id_perfil}")
-async def update_advisor(id_perfil: int, request: Request):
-    body = await request.json()
-    
-    response = requests.put(
-        f"{ADVISOR_SERVICE_URL}/advisors/{id_perfil}",
-        json=body,
-        headers=build_forward_headers(request),
-    )
-    
-    return forward_response(response)
-
-
-@app.put("/advisors/{id_perfil}/approve")
-async def approve_advisor(id_perfil: int, request: Request):
-    body = await request.json()
-
-    response = requests.put(
-        f"{ADVISOR_SERVICE_URL}/advisors/{id_perfil}/approve",
-        json=body,
-        headers=build_forward_headers(request),
-    )
-
-    return forward_response(response)
-
-
-@app.delete("/advisors/{id_perfil}")
-async def delete_advisor(id_perfil: int, request: Request):
-    response = requests.delete(
-        f"{ADVISOR_SERVICE_URL}/advisors/{id_perfil}",
-        headers=build_forward_headers(request),
-    )
-    return forward_response(response)
-
-
-# review_service
+class ReviewSchema(BaseModel):
+    idUsuario: int
+    idUsuarioAuth: int
+    idMateria: int
+    calificacion: int
+    comentario: str
 
 @app.post("/resenas")
-async def create_resena(request: Request):
-    body = await request.json()
-
+async def create_resena(datos: ReviewSchema, request: Request, _ = Depends(security)):
     response = requests.post(
-        f"{REVIEW_SERVICE_URL}/resenas",
-        json=body,
-        headers=build_forward_headers(request),
+        f"{REVIEW_SERVICE_URL}/resenas/", 
+        json=datos.dict(), 
+        headers=build_forward_headers(request)
     )
-
     return forward_response(response)
-
 
 @app.get("/resenas")
-async def list_resenas(request: Request):
-    response = requests.get(
-        f"{REVIEW_SERVICE_URL}/resenas",
-        params=dict(request.query_params),
-        headers=build_forward_headers(request),
-    )
-
+async def list_resenas(request: Request, _ = Depends(security)):
+    response = requests.get(f"{REVIEW_SERVICE_URL}/resenas", params=dict(request.query_params), headers=build_forward_headers(request))
     return forward_response(response)
 
+# --- RUTAS: CALENDAR SERVICE (8007) ---
 
-@app.put("/resenas/{id_resena}/estado")
-async def update_resena_estado(id_resena: int, request: Request):
-    body = await request.json()
+class AgendaSchema(BaseModel):
+    id_perfil: int
+    id_usuario: int
+    fecha: str
+    hora: str
 
-    response = requests.put(
-        f"{REVIEW_SERVICE_URL}/resenas/{id_resena}/estado",
-        json=body,
-        headers=build_forward_headers(request),
-    )
-
-    return forward_response(response)
-
-@app.delete("/resenas/{id_resena}")
-async def delete_resena(id_resena: int, request: Request):
-    response = requests.delete(
-        f"{REVIEW_SERVICE_URL}/resenas/{id_resena}",
-        headers=build_forward_headers(request),
-    )
-    return forward_response(response)
-
-# content_service
-@app.post("/contents/upload/")
-async def upload_content(
-    request: Request,
-    id_perfil: int,
-    id_materia: int
-):
-
-    form = await request.form()
-
-    file = form["file"]
-
-    files = {
-        "file": (
-            file.filename,
-            file.file,
-            file.content_type
+@app.post("/calendario/citas")
+async def crear_cita(datos: AgendaSchema, request: Request, _ = Depends(security)):
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{CALENDAR_SERVICE_URL}/calendario/citas", 
+            json=datos.dict(),
+            headers=build_forward_headers(request)
         )
-    }
-
-    data = {
-        "id_perfil": id_perfil,
-        "id_materia": id_materia
-    }
-
-    response = requests.post(
-        f"{CONTENT_SERVICE_URL}/contents/upload/",
-        files=files,
-        data=data,
-        headers=build_forward_headers(request),
+    return Response(
+        content=response.content, 
+        status_code=response.status_code, 
+        media_type="application/json"
     )
 
-    return forward_response(response)
+class DisponibilidadSchema(BaseModel):
+    id_perfil: int
+    dia_semana: str  # Ejemplo: "Lunes", "Martes"...
+    hora_inicio: str
+    hora_fin: str
 
-@app.get("/contents/materia/{id_materia}")
-async def get_contents_by_materia(id_materia: int, request: Request):
-
-    response = requests.get(
-        f"{CONTENT_SERVICE_URL}/contents/materia/{id_materia}",
-        headers=build_forward_headers(request),
+@app.post("/calendario/disponibilidad")
+async def crear_disponibilidad(datos: DisponibilidadSchema, request: Request, _ = Depends(security)):
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{CALENDAR_SERVICE_URL}/calendario/disponibilidad",
+            json=datos.dict(),
+            headers=build_forward_headers(request)
+        )
+    return Response(
+        content=response.content, 
+        status_code=response.status_code, 
+        media_type="application/json"
     )
 
-    return forward_response(response)
-
-@app.get("/contents/perfil/{id_perfil}")
-async def get_contents_by_perfil(id_perfil: int, request: Request):
-
-    response = requests.get(
-        f"{CONTENT_SERVICE_URL}/contents/perfil/{id_perfil}",
-        headers=build_forward_headers(request),
-    )
-
-    return forward_response(response)
-
-@app.get("/contents/download/{id_contenido}")
-async def download_content(id_contenido: int, request: Request):
-
-    response = requests.get(
-        f"{CONTENT_SERVICE_URL}/contents/download/{id_contenido}",
-        headers=build_forward_headers(request),
-    )
-
-    return forward_response(response)
-
-@app.delete("/contents/{id_contenido}")
-async def delete_content(id_contenido: int, request: Request):
-
-    response = requests.delete(
-        f"{CONTENT_SERVICE_URL}/contents/{id_contenido}",
-        headers=build_forward_headers(request),
-    )
-
-    return forward_response(response)
-
-# report_service
-@app.post("/reportes")
-async def create_report(request: Request):
-    body = await request.json()
-    response = requests.post(
-        f"{REPORT_SERVICE_URL}/reportes",
-        json=body,
-        headers=build_forward_headers(request),
-    )
-    return forward_response(response)
-
-@app.get("/reportes")
-async def get_all_reports(request: Request):
-    response = requests.get(
-        f"{REPORT_SERVICE_URL}/reportes",
-        headers=build_forward_headers(request),
-    )
-    return forward_response(response)
-
-@app.get("/reportes/usuario/{id_usuario}")
-async def get_reports_by_user(id_usuario: int, request: Request):
-    response = requests.get(
-        f"{REPORT_SERVICE_URL}/reportes/usuario/{id_usuario}",
-        headers=build_forward_headers(request),
-    )
-    return forward_response(response)
-
-@app.put("/reportes/{id_reporte}/estado")
-async def update_report_status(id_reporte: int, request: Request):
-    body = await request.json()
-    response = requests.put(
-        f"{REPORT_SERVICE_URL}/reportes/{id_reporte}/estado",
-        json=body,
-        headers=build_forward_headers(request),
-    )
-    return forward_response(response)
-
-# calendar: nuevos endpoints 
 @app.get("/calendario/citas/asesor/{id_perfil}")
-async def get_citas_asesor(id_perfil: int, request: Request):
-    response = requests.get(
-        f"{CALENDAR_SERVICE_URL}/calendario/citas/asesor/{id_perfil}",
-        headers=build_forward_headers(request),
-    )
+async def get_citas_asesor(id_perfil: int, request: Request, _ = Depends(security)):
+    response = requests.get(f"{CALENDAR_SERVICE_URL}/calendario/citas/asesor/{id_perfil}", headers=build_forward_headers(request))
     return forward_response(response)
 
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 
-@app.patch("/calendario/citas/{id_cita}/cancelar")
-async def cancelar_cita_gateway(id_cita: int, request: Request):
-    response = requests.patch(
-        f"{CALENDAR_SERVICE_URL}/calendario/citas/{id_cita}/cancelar",
-        headers=build_forward_headers(request),
+@app.get("/calendario/disponibilidad") # Quitamos el {id_perfil} de la ruta
+async def obtener_disponibilidad(
+    id_perfil: int, 
+    dia_semana: str, 
+    request: Request, 
+    _ = Depends(security)
+):
+    async with httpx.AsyncClient() as client:
+        # Pasamos los datos en el diccionario 'params'
+        params = {
+            "id_perfil": id_perfil,
+            "dia_semana": dia_semana
+        }
+        
+        response = await client.get(
+            f"{CALENDAR_SERVICE_URL}/calendario/disponibilidad",
+            params=params, # <--- Esto los convierte en ?id_perfil=X&dia_semana=Y
+            headers=build_forward_headers(request)
+        )
+        
+    return Response(
+        content=response.content, 
+        status_code=response.status_code, 
+        media_type="application/json"
     )
-    return forward_response(response)
-
-
-# qr-service 
-@app.post("/qr/generar/{id_cita}")
-async def generar_qr(id_cita: int, request: Request):
-    response = requests.post(
-        f"{QR_SERVICE_URL}/qr/generar/{id_cita}",
-        headers=build_forward_headers(request),
-    )
-    return forward_response(response)
-
-
-@app.post("/qr/verificar")
-async def verificar_qr(request: Request):
-    body = await request.json()
-    response = requests.post(
-        f"{QR_SERVICE_URL}/qr/verificar",
-        json=body,
-        headers=build_forward_headers(request),
-    )
-    return forward_response(response)
-
-
-@app.get("/qr/estado/{id_cita}")
-async def estado_qr(id_cita: int, request: Request):
-    response = requests.get(
-        f"{QR_SERVICE_URL}/qr/estado/{id_cita}",
-        headers=build_forward_headers(request),
-    )
-    return forward_response(response)

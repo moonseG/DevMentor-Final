@@ -24,11 +24,11 @@ class AuthenticateUser:
         if user.get("estado") == "Suspendido":
             raise HTTPException(status_code=403, detail="Tu cuenta ha sido suspendida. Contacta al administrador.")
 
-        if not pwd_context.verify(contrasena, user["contrasena"]):
+        if contrasena != user["contrasena"]:
             raise HTTPException(status_code=401, detail="Credenciales invalidas")
 
         token_payload = {
-            "sub": str(user["id_usuario"]),
+            "sub": str(user["id"]),
             "role": user["rol"],
         }
         access_token = self.token_provider.create_access_token(token_payload)
@@ -37,7 +37,7 @@ class AuthenticateUser:
             "access_token": access_token,
             "token_type": "bearer",
             "usuario": {
-                "id": user["id_usuario"],
+                "id": user["id"],
                 "nombre": user["nombre"],
                 "correo": user["correo"],
                 "rol": user["rol"],
