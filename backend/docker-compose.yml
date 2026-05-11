@@ -8,7 +8,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - AUTH_SERVICE_URL=http://auth-service:8001
+      - AUTH_SERVICE_URL=http://auth_service:8001
       - MATERIA_SERVICE_URL=http://materia-service:8002
       - ADVISOR_SERVICE_URL=http://advisor-service:8003
       - REVIEW_SERVICE_URL=http://review-service:8004
@@ -17,9 +17,9 @@ services:
 
   # --- MICROSERVICIOS ---
 
-  auth-service:
-    build: ./auth-service
-    container_name: auth-service
+  auth_service:
+    build: ./auth_service
+    container_name: auth_service
     expose:
       - "8001"
     environment:
