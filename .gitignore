@@ -1,0 +1,31 @@
+# entorno virtual
+venv/
+.env
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# archivos de sistema
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
+
+# node (por si alguien instala desde la raíz)
+node_modules/
+
+# carpetas de entornos virtuales por nombres
+usuarios/
+materias/
+advisors/
+apiGw/
+contenidos/
+reportes/
+resenas/
+
+estructura_proyecto.txt
+.vscode/

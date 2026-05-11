@@ -1,0 +1,22 @@
+# Ignorar todos los entornos virtuales
+**/bin/
+**/lib/
+**/lib64
+**/include/
+**/pyvenv.cfg
+
+# Ignorar carpetas de entornos virtuales por nombre
+usuarios/
+materias/
+advisors/
+resenas/
+apiGw/
+contenidos/
+qr/
+
+# Python
+__pycache__/
+*.pyc
+
+# Ignorar archivos subidos 
+content-service/uploads/

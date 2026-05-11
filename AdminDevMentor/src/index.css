@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Aquí configuraremos después nuestro color de fondo global (surface) */
+body {
+  background-color: #f6fafe;
+  color: #171c1f;
+}

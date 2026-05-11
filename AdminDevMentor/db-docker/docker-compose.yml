@@ -1,0 +1,17 @@
+services:
+  mysql-db:
+    image: mysql:8.0
+    container_name: admin-devmentor-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 12345
+    ports:
+      - "3308:3306"
+    volumes:
+      # Persistencia de datos (para no perderlos si se apaga el contenedor)
+      - mysql_data:/var/lib/mysql
+      # Script de inicialización automática
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+volumes:
+  mysql_data:

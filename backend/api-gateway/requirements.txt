@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+requests
+requests
+requests
+httpx
+python-jose[cryptography]
+python-multipart

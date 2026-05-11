@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "bootstrap": "^5.3.8",
+    "expo": "^55.0.9",
+    "expo-document-picker": "~55.0.13",
+    "react-native-calendars": "^1.1314.0"
+  }
+}

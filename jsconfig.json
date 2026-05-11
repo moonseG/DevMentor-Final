@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "module": "esnext",
+    "jsx": "react",
+    "allowSyntheticDefaultImports": true,
+    "moduleResolution": "node",
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
+    "paths": {
+      "@/*": ["./Frontend/src/*"]
+    }
+  },
+  "include": [
+    "Frontend/src/**/*",
+    "Frontend/*.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "backend",
+    "android",
+    "ios",
+    "babel.config.js",
+    "metro.config.js"
+  ]
+}
