@@ -1,0 +1,115 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "DevMentor: Levantar Backend",
+            "dependsOn": [
+                "Api gateway", 
+                "Auth Service",
+                "Materia Service",
+                "Advisor Service",
+                "Review Service",
+                "Content Service",
+                "Report Service",
+                "Calendar Service",
+                "QR Service",
+                "Notification Service",
+                "ngrok"
+
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "icon": { "id": "rocket", "color": "terminal.ansiYellow" }
+        },
+        {
+            "label": "Api gateway",
+            "type": "shell",
+            "command": "cd backend/api-gateway; source apiGw/bin/activate; uvicorn app:app --host 0.0.0.0 --port 8000 --reload",
+            "isBackground": true,
+            "icon": { "id": "layers", "color": "terminal.ansiCyan" },
+            "presentation": { "reveal": "always", "panel": "dedicated" }
+        },
+        {
+            "label": "Auth Service",
+            "type": "shell",
+            "command": "cd backend/auth_service; source usuarios/bin/activate; uvicorn app.main:app --port 8001 --reload",
+            "isBackground": true,
+            "icon": { "id": "person", "color": "terminal.ansiGreen" },
+            "presentation": { "reveal": "always", "panel": "dedicated" }
+        },
+        {
+            "label": "Materia Service",
+            "type": "shell",
+            "command": "cd backend/materia-service; source materias/bin/activate; uvicorn app:app --port 8002 --reload",
+            "isBackground": true,
+            "icon": { "id": "repo", "color": "terminal.ansiRed" },
+            "presentation": { "reveal": "always", "panel": "dedicated" }
+        },
+        {
+            "label": "Advisor Service",
+            "type": "shell",
+            "command": "cd backend/advisor-service; source advisors/bin/activate; uvicorn app.main:app --port 8003 --reload",
+            "isBackground": true,
+            "icon": { "id": "organization", "color": "terminal.ansiMagenta" },
+            "presentation": { "reveal": "always", "panel": "dedicated" }
+        },
+        {
+            "label": "Review Service",
+            "type": "shell",
+            "command": "cd backend/review-service; source resenas/bin/activate; uvicorn app.main:app --port 8004 --reload",
+            "isBackground": true,
+            "icon": { "id": "edit", "color": "terminal.ansiBlue" },
+            "presentation": { "reveal": "always", "panel": "dedicated" }
+        },
+        {
+            "label": "Content Service",
+            "type": "shell",
+            "command": "cd backend/content-service; source contenidos/bin/activate; uvicorn main:app --port 8005 --reload",
+            "isBackground": true,
+            "icon": { "id": "notebook", "color": "terminal.ansiYellow" },
+            "presentation": { "reveal": "always", "panel": "dedicated" }
+        },
+        {
+            "label": "Report Service",
+            "type": "shell",
+            "command": "cd backend/report-service; source reportes/bin/activate; uvicorn main:app --port 8006 --reload",
+            "isBackground": true,
+            "icon": { "id": "bug", "color": "terminal.ansiWhite" },
+            "presentation": { "reveal": "always", "panel": "dedicated" }
+        },
+        {
+            "label": "Calendar Service",
+            "type": "shell",
+            "command": "cd backend/calendar-service; source calendario/bin/activate; uvicorn app:app --port 8007 --reload",
+            "isBackground": true,
+            "icon": { "id": "calendar", "color": "terminal.ansiCyan" },
+            "presentation": { "reveal": "always", "panel": "dedicated" }
+        },
+        {
+            "label": "ngrok",
+            "type": "shell",
+            "command": "ngrok http 8000",
+            "isBackground": true,
+            "icon": { "id": "terminal", "color": "terminal.ansiRed" },
+            "presentation": { "reveal": "always", "panel": "dedicated" }
+        },
+        {
+            "label": "QR Service",
+            "type": "shell",
+            "command": "cd backend/qr-service; source qr/bin/activate; uvicorn main:app --port 8008 --reload",
+            "isBackground": true,
+            "icon": { "id": "symbol-function", "color": "terminal.ansiGreen" },
+            "presentation": { "reveal": "always", "panel": "dedicated" }
+        },
+        {
+            "label": "Notification Service",
+            "type": "shell",
+            "command": "cd backend/notification-service; source notificaciones/bin/activate; uvicorn main:app --port 8009 --reload",
+            "isBackground": true,
+            "icon": { "id": "bell", "color": "terminal.ansiMagenta" },
+            "presentation": { "reveal": "always", "panel": "dedicated" }
+        }
+    ]
+}
