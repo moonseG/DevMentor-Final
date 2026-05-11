@@ -8,6 +8,7 @@ services:
     ports:
       - "8000:8000"
     environment:
+      - JWT_SECRET=Taller2026 
       - AUTH_SERVICE_URL=http://auth_service:8001
       - MATERIA_SERVICE_URL=http://materia-service:8002
       - ADVISOR_SERVICE_URL=http://advisor-service:8003
@@ -33,7 +34,8 @@ services:
       - "8003"
     environment:
       - DATABASE_URL=mysql+pymysql://admin:contrasena12345@db-sistema.cvjyu96ahzvc.us-east-1.rds.amazonaws.com:3306/asesor_db
-
+      - JWT_SECRET=Taller2026
+  
   calendar-service:
     build: ./calendar-service
     container_name: calendar-service
@@ -41,6 +43,7 @@ services:
       - "8007"
     environment:
       - DATABASE_URL=mysql+pymysql://admin:contrasena12345@db-sistema.cvjyu96ahzvc.us-east-1.rds.amazonaws.com:3306/asesor_db
+      - JWT_SECRET=Taller2026
 
   materia-service:
     build: ./materia-service
@@ -49,6 +52,7 @@ services:
       - "8002"
     environment:
       - DATABASE_URL=mysql+pymysql://admin:contrasena12345@db-sistema.cvjyu96ahzvc.us-east-1.rds.amazonaws.com:3306/BD_materias
+      - JWT_SECRET=Taller2026
 
   review-service:
     build: ./review-service
@@ -57,3 +61,4 @@ services:
       - "8004"
     environment:
       - DATABASE_URL=mysql+pymysql://admin:contrasena12345@db-sistema.cvjyu96ahzvc.us-east-1.rds.amazonaws.com:3306/resenas_db
+      - JWT_SECRET=Taller2026
