@@ -8,54 +8,52 @@ services:
     ports:
       - "8000:8000"
     environment:
-      # CAMBIO AQUÍ: Las URLs deben apuntar al nombre del SERVICIO de Docker, no a localhost.
-      # Esto es para que el Gateway encuentre a los demás dentro de la red interna.
       - AUTH_SERVICE_URL=http://auth-service:8001
       - MATERIA_SERVICE_URL=http://materia-service:8002
       - ADVISOR_SERVICE_URL=http://advisor-service:8003
       - REVIEW_SERVICE_URL=http://review-service:8004
       - CALENDAR_SERVICE_URL=http://calendar-service:8007
-    depends_on:
-      - auth-service
-      - advisor-service
-      - calendar-service
-      - materia-service
-      - review-service
+    # Eliminamos depends_on para evitar que el fallo de uno detenga al Gateway
 
   # --- MICROSERVICIOS ---
 
   auth-service:
     build: ./auth-service
     container_name: auth-service
+    expose:
+      - "8001"
     environment:
-      # CAMBIO AQUÍ: Conexión directa a AWS RDS
       - DATABASE_URL=mysql+pymysql://admin:contrasena12345@db-sistema.cvjyu96ahzvc.us-east-1.rds.amazonaws.com:3306/asesorias
       - JWT_SECRET=Taller2026
 
   advisor-service:
     build: ./advisor-service
     container_name: advisor-service
+    expose:
+      - "8003"
     environment:
-      # CAMBIO AQUÍ: Conexión directa a AWS RDS
       - DATABASE_URL=mysql+pymysql://admin:contrasena12345@db-sistema.cvjyu96ahzvc.us-east-1.rds.amazonaws.com:3306/asesor_db
 
   calendar-service:
     build: ./calendar-service
     container_name: calendar-service
+    expose:
+      - "8007"
     environment:
-      # CAMBIO AQUÍ: Conexión directa a AWS RDS y puerto 8007
       - DATABASE_URL=mysql+pymysql://admin:contrasena12345@db-sistema.cvjyu96ahzvc.us-east-1.rds.amazonaws.com:3306/asesor_db
 
   materia-service:
     build: ./materia-service
     container_name: materia-service
+    expose:
+      - "8002"
     environment:
-      # CAMBIO AQUÍ: Conexión directa a AWS RDS
       - DATABASE_URL=mysql+pymysql://admin:contrasena12345@db-sistema.cvjyu96ahzvc.us-east-1.rds.amazonaws.com:3306/BD_materias
 
   review-service:
     build: ./review-service
     container_name: review-service
+    expose:
+      - "8004"
     environment:
-      # CAMBIO AQUÍ: Conexión directa a AWS RDS
       - DATABASE_URL=mysql+pymysql://admin:contrasena12345@db-sistema.cvjyu96ahzvc.us-east-1.rds.amazonaws.com:3306/resenas_db
