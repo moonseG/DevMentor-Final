@@ -8,7 +8,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - JWT_SECRET=Taller2026 
+      - JWT_SECRET=Taller2026
       - AUTH_SERVICE_URL=http://auth_service:8001
       - MATERIA_SERVICE_URL=http://materia-service:8002
       - ADVISOR_SERVICE_URL=http://advisor-service:8003
@@ -35,7 +35,6 @@ services:
     environment:
       - DATABASE_URL=mysql+pymysql://admin:contrasena12345@db-sistema.cvjyu96ahzvc.us-east-1.rds.amazonaws.com:3306/asesor_db
       - JWT_SECRET=Taller2026
-  
   calendar-service:
     build: ./calendar-service
     container_name: calendar-service

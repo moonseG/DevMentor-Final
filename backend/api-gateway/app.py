@@ -23,16 +23,22 @@ app.add_middleware(
 
 # --- CONFIGURACIÓN DE PUERTOS (AJUSTADO PARA DOCKER/NUBE) ---
 # CAMBIO AQUÍ: Usamos os.getenv para que Docker Compose mande las URLs correctas
-AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8001")
-MATERIA_SERVICE_URL = os.getenv("MATERIA_SERVICE_URL", "http://localhost:8002")
-ADVISOR_SERVICE_URL = os.getenv("ADVISOR_SERVICE_URL", "http://localhost:8003")
-REVIEW_SERVICE_URL = os.getenv("REVIEW_SERVICE_URL", "http://localhost:8004")
-CALENDAR_SERVICE_URL = os.getenv("CALENDAR_SERVICE_URL", "http://localhost:8007")
+AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://auth_service:8001")
+MATERIA_SERVICE_URL = os.getenv("MATERIA_SERVICE_URL", "http://materia-service:8002")
+ADVISOR_SERVICE_URL = os.getenv("ADVISOR_SERVICE_URL", "http://advisor_service:8003")
+REVIEW_SERVICE_URL = os.getenv("REVIEW_SERVICE_URL", "http://review-service:8004")
+CALENDAR_SERVICE_URL = os.getenv("CALENDAR_SERVICE_URL", "http://calendar-service:8007")
 
 # Seguridad
 # CAMBIO AQUÍ: Usa la misma llave que en Auth Service
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "Taller2026") 
-JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+#JWT_SECRET_KEY = os.getenv("JWT_SECRET") or os.getenv("JWT_SECRET_KEY") or "Taller2026" 
+#JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+
+JWT_SECRET_KEY = "Taller2026"
+JWT_ALGORITHM = "HS256"
+
+# AGREGA ESTE PRINT PARA VERLO EN LOS LOGS
+print(f"DEBUG: El Gateway está usando la llave: {JWT_SECRET_KEY}")
 
 PUBLIC_ROUTES = {
     ("POST", "/auth/login"),
@@ -60,10 +66,12 @@ def is_public_route(request: Request) -> bool:
 def build_forward_headers(request: Request):
     headers = {}
     authorization = request.headers.get("Authorization")
+    print(f"DEBUG: Auth Header recibido: {authorization}")
     if authorization:
         headers["Authorization"] = authorization
 
     user_id = getattr(request.state, "user_id", None)
+    print(f"DEBUG: User ID en state: {user_id}")
     user_role = getattr(request.state, "user_role", None)
 
     if user_id:
@@ -92,17 +100,19 @@ async def authorization_middleware(request: Request, call_next):
 
     token = auth_header.split(" ", 1)[1].strip()
 
+    # Busca esta parte en tu Gateway
     try:
-        # CAMBIO AQUÍ: Asegúrate de que JWT_SECRET_KEY sea "Taller2026" para que coincida con Auth
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-        request.state.user_id = str(payload.get("sub"))
-        request.state.user_role = str(payload.get("role"))
-        
-    except JWTError:
-        return JSONResponse(status_code=401, content={"detail": "Unauthorized: Invalid or Expired Token"})
+        payload = jwt.decode(token, os.getenv("JWT_SECRET"), algorithms=["HS256"])
+        request.state.user_id = payload.get("sub")
+        request.state.user_role = payload.get("role")
+    except jwt.ExpiredSignatureError:
+        return JSONResponse(status_code=401, content={"detail": "Token expirado"})
+    except jwt.JWTError:
+        return JSONResponse(status_code=401, content={"detail": "Firma invalida"})
+    except Exception as e:
+        return JSONResponse(status_code=401, content={"detail": str(e)})
 
     return await call_next(request)
-
 # --- RUTAS: AUTH SERVICE (8001) ---
 
 # Definimos qué necesita el login
